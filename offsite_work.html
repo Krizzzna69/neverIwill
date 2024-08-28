@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offsite Work Request</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            margin: auto;
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+
+        .form-group button {
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .form-group button:hover {
+            background-color: #45a049;
+        }
+
+        #map {
+            height: 400px;
+            width: 100%;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .error {
+            color: red;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Offsite Work Request</h2>
+    <div class="form-group">
+        <label for="fromTime">From Time</label>
+        <input type="datetime-local" id="fromTime" required>
+    </div>
+    <div class="form-group">
+        <label for="leavingTime">Leaving Time</label>
+        <input type="datetime-local" id="leavingTime" required>
+    </div>
+    <div class="form-group">
+        <label for="location">Location</label>
+        <input type="text" id="location" required>
+    </div>
+    <div class="form-group">
+        <button onclick="submitOffsiteWork()">Submit</button>
+    </div>
+    <div class="form-group">
+        <button onclick="checkApprovalStatus()">Check Approval Status</button>
+    </div>
+    <div id="approvalSection" style="display: none;">
+        <div class="form-group">
+            <button id="panButton" onclick="panToCurrentLocation()">Pan to Current Location</button>
+        </div>
+        <div id="map"></div>
+    </div>
+    <div class="error" id="errorMessage"></div>
+</div>
+
+<script>
+    let map, userMarker;
+    const username = localStorage.getItem('username');
+    console.log(username);
+
+    function initMap() {
+        map = new google.maps.Map(document.getElementById('map'), {
+            center: { lat: -34.397, lng: 150.644 },
+            zoom: 8
+        });
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition((position) => {
+                const userLocation = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                };
+                map.setCenter(userLocation);
+                userMarker = new google.maps.Marker({
+                    position: userLocation,
+                    map: map,
+                    title: "Your Location"
+                });
+                document.getElementById('map').style.display = 'block';
+            }, () => {
+                alert('Geolocation failed');
+            });
+        } else {
+            alert('Geolocation is not supported by this browser');
+        }
+    }
+
+    function panToCurrentLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition((position) => {
+                const userLocation = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                };
+                map.panTo(userLocation);
+                userMarker.setPosition(userLocation);
+            });
+        }
+    }
+
+    function checkApprovalStatus() {
+    // Fetch the username from local storage
+    const username = localStorage.getItem('username');
+    
+    if (!username) {
+        document.getElementById('errorMessage').textContent = 'Username not found';
+        return;
+    }
+
+    fetch(`https://lasthope-khuj.onrender.com/check-approval-status?username=${username}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                if (data.isApproved) {
+                    document.getElementById('approvalSection').style.display = 'block';
+                    initMap();
+                } else {
+                    document.getElementById('errorMessage').textContent = 'Request not approved yet';
+                    document.getElementById('map').style.display = 'none';
+                }
+            } else {
+                document.getElementById('errorMessage').textContent = data.message || 'Unknown error';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('errorMessage').textContent = `Error: ${error.message}`;
+        });
+}
+
+
+function submitOffsiteWork() {
+    const fromTime = document.getElementById('fromTime').value;
+    const leavingTime = document.getElementById('leavingTime').value;
+    const location = document.getElementById('location').value;
+
+    if (!fromTime || !leavingTime || !location) {
+        alert('Please fill out all fields.');
+        return;
+    }
+
+    const offsiteData = {
+        fromTime,
+        leavingTime,
+        location,
+        username: localStorage.getItem('username'),
+        currentLocation: userMarker ? userMarker.getPosition().toJSON() : null
+    };
+
+    fetch('https://lasthope-khuj.onrender.com/offsite-request', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(offsiteData),
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Offsite work request submitted successfully!');
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to submit offsite request');
+    });
+}
+
+</script>
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyASAMgt4KkC1Hr4bbf8A8JBGwAcpwlAv6o&callback=initMap&v=weekly&libraries=geometry"></script>
+</body>
+</html>

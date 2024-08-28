@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        .btn {
+            padding: 5px 10px;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .btn-approve {
+            background-color: #4CAF50;
+        }
+
+        .btn-disapprove {
+            background-color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <h2>Admin Dashboard - Offsite Work Requests</h2>
+    <table>
+    <thead>
+        <tr>
+            <th>Username</th>
+            <th>From Time</th>
+            <th>To Time</th>
+            <th>Location</th>
+            <th>Current Location</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody id="requestsTable">
+        <!-- Requests will be dynamically added here -->
+    </tbody>
+</table>
+
+<script>
+    function updateRequestStatus(username, requestId, isApproved) {
+        fetch('https://lasthope-khuj.onrender.com/admin/approve-request', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ username, requestId, isApproved }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Request status updated successfully');
+                location.reload(); // Reload the page to reflect changes
+            } else {
+                alert('Failed to update request status');
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+        fetch('https://lasthope-khuj.onrender.com/admin/offsite-requests')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const requestsTable = document.getElementById('requestsTable');
+                    data.requests.forEach(request => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${request.username}</td>
+                            <td>${new Date(request.fromTime).toLocaleString()}</td>
+                            <td>${new Date(request.leavingTime).toLocaleString()}</td>
+                            <td>${request.location}</td>
+                            <td>${request.currentLocation ? `${request.currentLocation.lat}, ${request.currentLocation.lon}` : 'Not Submitted'}</td>
+                            <td>${request.isApproved === null ? 'Pending' : request.isApproved ? 'Approved' : 'Disapproved'}</td>
+                            <td>
+                                <button class="btn btn-approve" onclick="updateRequestStatus('${request.username}', '${request.requestId}', true)">Approve</button>
+                                <button class="btn btn-disapprove" onclick="updateRequestStatus('${request.username}', '${request.requestId}', false)">Disapprove</button>
+                            </td>
+                        `;
+                        requestsTable.appendChild(row);
+                    });
+                } else {
+                    alert('Failed to load requests');
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    });
+</script>
+</body>
+</html>
