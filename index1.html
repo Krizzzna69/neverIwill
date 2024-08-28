@@ -233,7 +233,7 @@
 
     const punchInTime = new Date().getTime();
 
-    fetch('https://lasthope-khuj.onrender.com/punch-in', {
+    fetch('https://neveriwill.onrender.com/punch-in', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -261,7 +261,7 @@
 
             const punchOutTime = new Date().getTime();
 
-            fetch('https://lasthope-khuj.onrender.com/punch-out', {
+            fetch('https://neveriwill.onrender.com/punch-out', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -321,7 +321,7 @@
     }
 
     try {
-        const response = await fetch(`https://lasthope-khuj.onrender.com/get-attendance?username=${encodeURIComponent(username)}`, {
+        const response = await fetch(`https://neveriwill.onrender.com/get-attendance?username=${encodeURIComponent(username)}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
